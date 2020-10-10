@@ -43,6 +43,12 @@ require 'nokogiri'  #gem installする
 # - > リストを表示する
 # - > helpコマンドのようなもの
 
+# ボイスチャット系
+# - join
+# - > ボイスチャットに入る
+# - leave
+# - > ボイスチャットから抜ける
+
 # ツール系
 # - dice
 # - > 1~6の乱数を返す
@@ -136,7 +142,9 @@ $gaming_colors = ['FF0000', 'FF8000', 'FFFF00', '80FF00', '00FF00', '00FF80', '0
 $gaming_count = 0
 $timer_count = 0
 $timer_isstop = 0
-$heatbeat_count = 0
+$heartbeat_count = 0
+$vc_join_channel = nil
+$vc_join_channelname = ""
 
 bot.ready do |event|
   bot.game = BOTPLAYING
@@ -153,10 +161,10 @@ bot.heartbeat do |event|
   #puts "[HEARTBEAT] (#{nowtime})"
   #puts "Gaming Color: #{$gaming_colors[$gaming_count]} (#{$gaming_count})"
   $heartbeat_count = $heartbeat_count + 1
-  $gaming_count = $gaming_count + 1
-  if $gaming_count >= $gaming_colors.size
-    $gaming_count = 0
-  end
+  #$gaming_count = $gaming_count + 1
+  #if $gaming_count >= $gaming_colors.size
+  #  $gaming_count = 0
+  #end
   bot.game = $playing[rand(0..$playing.size-1)]
 end
 
@@ -832,6 +840,31 @@ end
 bot.command :heartbeatcount do |event|
   event.respond "#{$heartbeat_count}回Heartbeatしました！"
 end
+
+# join
+bot.command :join do |event|
+  channel = event.user.voice_channel
+  next "ボイスチャンネルに入っている必要があります！" unless channel
+  $vc_join_channel = channel
+  $vc_join_channelname = channel.name
+  bot.voice_connect(channel)
+  event.respond "ボイスチャンネル(#{channel.name})に入りました！"
+
+end
+
+# leave
+bot.command :leave do |event|
+  puts $vc_join_channel
+  puts $vc_join_channelname
+  next "ボイスチャンネルに入っていません" unless $vc_join_channel
+  event.respond "ボイスチャンネル(#{$vc_join_channelname})から抜けました！"
+  $vc_join_channel = nil
+  $vc_join_channelname = ""
+  bot.voice_destroy(event.server)
+end
+
+
+
 
 
 bot.command :test do |event, a|

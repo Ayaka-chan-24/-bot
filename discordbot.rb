@@ -25,6 +25,8 @@ require 'nokogiri'  #gem installする
 # - > タイマーが実行中か確認する
 # - timerstop
 # - > タイマーの実行を止める
+# - heartbeatcount
+# - > Heartbeatの回数を返す
 
 # チャット系
 # - ping
@@ -134,6 +136,7 @@ $gaming_colors = ['FF0000', 'FF8000', 'FFFF00', '80FF00', '00FF00', '00FF80', '0
 $gaming_count = 0
 $timer_count = 0
 $timer_isstop = 0
+$heatbeat_count = 0
 
 bot.ready do |event|
   bot.game = BOTPLAYING
@@ -149,6 +152,7 @@ end
 bot.heartbeat do |event|
   #puts "[HEARTBEAT] (#{nowtime})"
   #puts "Gaming Color: #{$gaming_colors[$gaming_count]} (#{$gaming_count})"
+  $heartbeat_count = $heartbeat_count + 1
   $gaming_count = $gaming_count + 1
   if $gaming_count >= $gaming_colors.size
     $gaming_count = 0
@@ -673,23 +677,17 @@ bot.command :earthquake do |event|
   eqimgurl = eqimg[4].to_s
   eqimgurl = eqimgurl.slice(10..eqimgurl.length-16)
   #発生時刻
-  eqtime = eqtable[2].to_s
-  eqtime = eqtime.slice(41..eqtime.length-14)
+  eqtime = eqtable[2].text
   #震源地
-  eqplace = eqtable[4].to_s
-  eqplace = eqplace.slice(63..eqplace.length-18)
+  eqplace = eqtable[4].text
   #最大震度
-  eqmax = eqtable[6].to_s
-  eqmax = eqmax.slice(41..eqmax.length-14)
+  eqmax = eqtable[6].text
   #マグニチュード
-  eqmag = eqtable[8].to_s
-  eqmag = eqmag.slice(41..eqmag.length-14)
+  eqmag = eqtable[8].text
   #深さ
-  eqdepth = eqtable[10].to_s
-  eqdepth = eqdepth.slice(41..eqdepth.length-14)
+  eqdepth = eqtable[10].text
   #津波情報
-  eqtsunami = eqtable[14].to_s
-  eqtsunami = eqtsunami.slice(41..eqtsunami.length-14)
+  eqtsunami = eqtable[14].text
   event.send_embed do |embed|
     embed.title = eqplace
     embed.url = url
@@ -720,7 +718,7 @@ end
 
 # typhoon
 bot.command :typhoon do |event|
-  url = "https://typhoon.yahoo.co.jp/weather/jp/typhoon/"
+  url = "https://typhoon.yahoo.co.jp/weather/jp/typhoon/?c=1"
   charset = nil
   html = open(url) do |webpage|
     charset = webpage.charset
@@ -738,30 +736,21 @@ bot.command :typhoon do |event|
     tpimgurl = tpimg[4].to_s
     tpimgurl = tpimgurl.slice(10..tpimgurl.length-27)
     #名称
-    tpname = tptable[0].to_s
-    tpname = tpname.slice(4..tpname.length-6)
+    tpname = tptable[0].text
     #大きさ
-    tpsize = tptable[1].to_s
-    tpsize = tpsize.slice(4..tpsize.length-6)
+    tpsize = tptable[1].text
     #強さ
-    tpstrong = tptable[2].to_s
-    tpstrong = tpstrong.slice(4..tpstrong.length-6)
+    tpstrong = tptable[2].text
     #現在位置
-    tpplace = tptable[3].to_s
-    tpplace = tpplace.slice(4..tpplace.length-6)
+    tpplace = tptable[3].text
     #進行方向・速さ
-    tpdir = tptable[5].to_s
-    tpdir = tpdir.slice(4..tpdir.length-6)
-    tpspeed = tptable[6].to_s
-    tpspeed = tpspeed.slice(4..tpspeed.length-6)
+    tpdir = tptable[5].text
+    tpspeed = tptable[6].text
     #中心気圧
-    tpatom = tptable[7].to_s
-    tpatom = tpatom.slice(4..tpatom.length-6)
+    tpatom = tptable[7].text
     #最大風速・最大瞬間風速
-    tpwind = tptable[8].to_s
-    tpwind = tpwind.slice(4..tpwind.length-6)
-    tpswind = tptable[9].to_s
-    tpswind = tpswind.slice(4..tpswind.length-6)
+    tpwind = tptable[8].text
+    tpswind = tptable[9].text
     event.send_embed do |embed|
       embed.title = tpnumber
       embed.description = tpname
@@ -837,6 +826,11 @@ end
 # calcblockexp
 bot.command :calcblockexp do |event, lvl|
   event.respond "レベル#{lvl.to_i} までに #{25*(lvl.to_i)*(lvl.to_i-1)} 経験値が必要です！"
+end
+
+# heartbeatcount
+bot.command :heartbeatcount do |event|
+  event.respond "#{$heartbeat_count}回Heartbeatしました！"
 end
 
 

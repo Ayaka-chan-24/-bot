@@ -21,16 +21,25 @@ require 'nokogiri'  #gem installする
 ##### コマンドリスト#####
 
 # botシステム系
+# - timercheck
+# - > タイマーが実行中か確認する
+# - timerstop
+# - > タイマーの実行を止める
+
+# チャット系
 # - ping
 # - > pongを返す
 # - hello
 # - > Hello, Worldを返す
 # - help
 # - > helpを返す
-# - timercheck
-# - > タイマーが実行中か確認する
-# - timerstop
-# - > タイマーの実行を止める
+# - gif 名前
+# - > 指定した名前のgifに変換する
+# - asbot テキスト
+# - > テキストの内容をbotに発言させる
+# - list 内容
+# - > リストを表示する
+# - > helpコマンドのようなもの
 
 # ツール系
 # - dice
@@ -82,6 +91,8 @@ require 'nokogiri'  #gem installする
 # - > ゲーム名：dr grav hide timv bp draw sp
 # - hiveplayercount
 # - > The Hiveに接続している人数を返す
+# - calcblockexp レベル
+# - > 指定レベルまでに必要な経験値を返す
 
 File.open("TOKEN.aykbot", "r") do |rtext|
   $bottoken = rtext.read
@@ -104,6 +115,19 @@ TIMERMAX = 1
 nowdate = Date.today
 nowtime = DateTime.now
 
+$playing = [
+  '-help でヘルプ',
+  'あやかちゃんは魔法少女',
+  '16才だよ',
+  'ニンゲンです',
+  'ねむたい',
+  '女の子が空から降ってこないかな',
+  '実装してほしいもの募集中',
+  'お友達がほしい',
+  'お金ください',
+  ''
+]
+
 $gaming_colors = ['FF0000', 'FF8000', 'FFFF00', '80FF00', '00FF00', '00FF80', '00FFFF',
 '0080FF', '0000FF', '8000FF', 'FF00FF', 'FF0080' ]
 
@@ -125,14 +149,14 @@ end
 bot.heartbeat do |event|
   #puts "[HEARTBEAT] (#{nowtime})"
   #puts "Gaming Color: #{$gaming_colors[$gaming_count]} (#{$gaming_count})"
-  #$gaming_count = $gaming_count + 1
-  #if $gaming_count >= $gaming_colors.size
-  #  $gaming_count = 0
-  #end
+  $gaming_count = $gaming_count + 1
+  if $gaming_count >= $gaming_colors.size
+    $gaming_count = 0
+  end
+  bot.game = $playing[rand(0..$playing.size-1)]
 end
 
-# help ページ
-# - ヘルプを返す
+# help
 bot.command :help do |event|
     event.respond "```DIFF
 [ヘルプ このbotについて]
@@ -152,20 +176,17 @@ bot.command :help do |event|
 end
 
 # ping
-# - pongを返す
 bot.command :ping do |event|
   responce = event.respond "pong! #{event.user.name}さん！"
   responce.edit "pong! #{event.user.name}さん！ (応答時間 #{Time.now - event.timestamp}秒)"
 end
 
 # hello
-# - Hello, Worldを返す
 bot.command :hello do |event|
   event.respond "Hello, World"
 end
 
 # dice
-# - 1~6のランダムな数を返す
 bot.command :dice do |event|
   event.respond "サイコロを振ります！"
   sleep(0.5)
@@ -174,9 +195,7 @@ bot.command :dice do |event|
   event.respond "#{rand(1..6)}"
 end
 
-# dicex 最小値 最大値 回数
-# - 最小値～最大値のランダムな数を返す
-# - 指定した回数分返す
+# dicex
 bot.command :dicex do |event, dmin, dmax, dloop|
   dmin = dmin.to_i
   dmax = dmax.to_i
@@ -203,10 +222,7 @@ bot.command :dicex do |event, dmin, dmax, dloop|
   results.join(" ")
 end
 
-# dicet 回数 最大値
-# - 最大値までのランダムな数を返す
-# - 指定した回数分返す
-# - TRPG用途向け
+# dicet
 bot.command :dicet do |event, dloop, dmax|
   dloop = dloop.to_i
   dmax = dmax.to_i
@@ -229,11 +245,7 @@ bot.command :dicet do |event, dloop, dmax|
   results.join(" ")
 end
 
-# calc 数値A 演算子 数値B
-# = 演算子
-# = - + - * / % に対応
-# - 指定した演算子で数値Aと数値Bを計算する
-# - 計算結果を返す
+# calc
 bot.command :calc do |event, num_a, symb, num_b|
   num_a = num_a.to_f
   num_b = num_b.to_f
@@ -271,7 +283,6 @@ bot.command :calc do |event, num_a, symb, num_b|
 end
 
 # omikuji
-# - おみくじをします
 bot.command :omikuji do |event|
   omikuji = ["大吉", "吉", "中吉", "小吉", "末吉", "凶", "大凶"]
   event.respond "おみくじを引きます！"
@@ -281,9 +292,7 @@ bot.command :omikuji do |event|
   event.respond "#{omikuji[rand(0..6)]} です！"
 end
 
-# janken 出す手
-# - じゃんけんをする
-# - 出す手は グー or ぐー チョキ or ちょき パー or ぱー が使える
+# janken
 bot.command :janken do |event, hand|
   # 0:グー 1:チョキ 2:パー
   if hand == "ぐー" or hand == "グー"
@@ -343,26 +352,14 @@ bot.command :janken do |event, hand|
   end
 end
 
-# hiveplayer プレイヤー名 (ゲーム名)
-# - 指定したプレイヤーのステータスを返す
-# - ゲーム名を指定するとそのゲームのステータスを返す
-#   - dr grav hide bed sky timv bp draw sp
+# hiveplayer
 bot.command :hiveplayer do |event, playername, gamename|
-  #gamename = gamename.to_s.downcase!
   case gamename
   when "dr" then
     url = 'https://api.hivemc.com/v1/player/' + playername + '/' + gamename + ''
     uri = URI.parse(url)
     response = Net::HTTP.get_response(uri)
     hash = JSON.parse(response.body)
-    puts "Username: #{playername}"
-    puts "Game: #{gamename.upcase}"
-    puts "Total Points: #{hash["total_points"]}"
-    puts "Rank: #{hash["title"]}"
-    puts "Games Played: #{hash["games_played"]}"
-    puts "Victories: #{hash["victories"]}"
-    puts "Deaths: #{hash["deaths"]}"
-    puts "Kills: #{hash["kills"]}"
     event.respond "```DIFF
 [Player → #{playername} in #{gamename.upcase}]
 -> Total Points
@@ -382,12 +379,6 @@ bot.command :hiveplayer do |event, playername, gamename|
     uri = URI.parse(url)
     response = Net::HTTP.get_response(uri)
     hash = JSON.parse(response.body)
-    puts "Username: #{playername}"
-    puts "Game: #{gamename.upcase}"
-    puts "Points: #{hash["points"]}"
-    puts "Rank: #{hash["title"]}"
-    puts "Games Played: #{hash["gamesplayed"]}"
-    puts "Victories: #{hash["victories"]}"
     event.respond "```DIFF
 [Player → #{playername} in #{gamename.upcase}]
 -> Points
@@ -404,16 +395,6 @@ bot.command :hiveplayer do |event, playername, gamename|
     uri = URI.parse(url)
     response = Net::HTTP.get_response(uri)
     hash = JSON.parse(response.body)
-    puts "Username: #{playername}"
-    puts "Game: #{gamename.upcase}"
-    puts "Points: #{hash["total_points"]}"
-    puts "Rank: #{hash["title"]}"
-    puts "Games Played: #{hash["gamesplayed"]}"
-    puts "Victories: #{hash["victories"]}"
-    puts "Deaths: #{hash["deaths"]}"
-    puts "Kills as Seeker: #{hash["seekerkills"]}"
-    puts "Kills as Hider: #{hash["hiderkills"]}"
-    puts "Time Alive: #{hash["timealive"]}"
     event.respond "```DIFF
 [Player → #{playername} in #{gamename.upcase}]
 -> Points
@@ -437,15 +418,6 @@ bot.command :hiveplayer do |event, playername, gamename|
     uri = URI.parse(url)
     response = Net::HTTP.get_response(uri)
     hash = JSON.parse(response.body)
-    puts "Username: #{playername}"
-    puts "Game: #{gamename.upcase}"
-    puts "Points: #{hash["total_points"]}"
-    puts "Rank: #{hash["title"]}"
-    puts "Most Points: #{hash["most_points"]}"
-    puts "Role Points: #{hash["role_points"]}"
-    puts "Traitor Points: #{hash["t_points"]}"
-    puts "Innocent Points: #{hash["i_points"]}"
-    puts "Detective Points: #{hash["d_points"]}"
     event.respond "```DIFF
 [Player → #{playername} in #{gamename.upcase}]
 -> Points
@@ -467,13 +439,6 @@ bot.command :hiveplayer do |event, playername, gamename|
     uri = URI.parse(url)
     response = Net::HTTP.get_response(uri)
     hash = JSON.parse(response.body)
-    puts "Username: #{playername}"
-    puts "Game: #{gamename.upcase}"
-    puts "Points: #{hash["total_points"]}"
-    puts "Rank: #{hash["title"]}"
-    puts "Games Played: #{hash["games_played"]}"
-    puts "Total Top 3's: #{hash["total_placing"]}"
-    puts "Eliminations: #{hash["total_eliminations"]}"
     event.respond "```DIFF
 [Player → #{playername} in #{gamename.upcase}]
 -> Points
@@ -491,15 +456,6 @@ bot.command :hiveplayer do |event, playername, gamename|
     uri = URI.parse(url)
     response = Net::HTTP.get_response(uri)
     hash = JSON.parse(response.body)
-    puts "Username: #{playername}"
-    puts "Game: #{gamename.upcase}"
-    puts "Points: #{hash["total_points"]}"
-    puts "Rank: #{hash["title"]}"
-    puts "Games Played: #{hash["gamesplayed"]}"
-    puts "Victories: #{hash["victories"]}"
-    puts "Correct Guesses: #{hash["correct_guesses"]}"
-    puts "Incorrect Guesses: #{hash["incorrect_guesses"]}"
-    puts "Skips: #{hash["skips"]}"
     event.respond "```DIFF
 [Player → #{playername} in #{gamename.upcase}]
 -> Points
@@ -521,16 +477,6 @@ bot.command :hiveplayer do |event, playername, gamename|
     uri = URI.parse(url)
     response = Net::HTTP.get_response(uri)
     hash = JSON.parse(response.body)
-    puts "Username: #{playername}"
-    puts "Game: #{gamename.upcase}"
-    puts "Points: #{hash["points"]}"
-    puts "Rank: #{hash["title"]}"
-    puts "Games Played: #{hash["gamesplayed"]}"
-    puts "Victories: #{hash["victories"]}"
-    puts "Deaths: #{hash["deaths"]}"
-    puts "Eggs Fired: #{hash["eggfired"]}"
-    puts "Blocks Destroyed: #{hash["blocksdestroyed"]}"
-    puts "Time Alive: #{hash["timealive"]}"
     event.respond "```DIFF
 [Player → #{playername} in #{gamename.upcase}]
 -> Points
@@ -554,10 +500,6 @@ bot.command :hiveplayer do |event, playername, gamename|
     uri = URI.parse(url)
     response = Net::HTTP.get_response(uri)
     hash = JSON.parse(response.body)
-    puts "Username: #{hash["username"]}"
-    puts "Tokens: #{hash["tokens"]}"
-    puts "Medals: #{hash["medals"]}"
-    puts "Crates: #{hash["crates"]}"
     event.respond "```DIFF
 [Player → #{playername}]
 -> Player Name
@@ -572,7 +514,6 @@ bot.command :hiveplayer do |event, playername, gamename|
 end
 
 # hiveplayercount
-# - Hiveに接続しているプレイヤー数を返す
 bot.command :hiveplayercount do |event|
   url = 'https://api.hivemc.com/v1/server/playercount'
   uri = URI.parse(url)
@@ -586,7 +527,6 @@ bot.command :hiveplayercount do |event|
 end
 
 # curseme
-# - あやかちゃんbotが罵ってくれます
 bot.command :curseme do |event, option|
   if option == "about"
     event.respond "```DIFF
@@ -616,8 +556,7 @@ bot.command :curseme do |event, option|
   end
 end
 
-# memo 名前 モード テキスト
-# メモ機能です
+# memo
 bot.command :memo do |event, name, mode, text|
   if name != ""
     if mode == "read"
@@ -637,10 +576,7 @@ bot.command :memo do |event, name, mode, text|
   end
 end
 
-# kazuate 数字
-# - 数当てゲームです
-# - 数字は 0~99
-# - 数字を regen にすると新しく生成
+# kazuate
 bot.command :kazuate do |event, num|
   if num == "regen"
     correct = rand(0..99)
@@ -672,9 +608,7 @@ bot.command :kazuate do |event, num|
   end
 end
 
-# timer 時間
-# タイマー機能
-# 時間は秒単位
+# timer
 bot.command :timer do |event, seconds, title|
   seconds = seconds.to_i
   counter = 0
@@ -710,14 +644,12 @@ bot.command :timer do |event, seconds, title|
 end
 
 # timerstop
-# タイマーの実行を止める
 bot.command :timerstop do |event|
   $timer_isstop = 1
   event.respond "タイマーを中断しました！"
 end
 
 # timercheck
-# タイマーが動いているか確認する
 bot.command :timercheck do |event|
   if $timer_count == 0
     event.respond "タイマーは実行していません"
@@ -727,7 +659,6 @@ bot.command :timercheck do |event|
 end
 
 # earthquake
-# 地震情報を取得する
 bot.command :earthquake do |event|
   url = "https://typhoon.yahoo.co.jp/weather/jp/earthquake/"
   charset = nil
@@ -788,7 +719,6 @@ bot.command :earthquake do |event|
 end
 
 # typhoon
-# 台風情報を取得する
 bot.command :typhoon do |event|
   url = "https://typhoon.yahoo.co.jp/weather/jp/typhoon/"
   charset = nil
@@ -873,6 +803,45 @@ bot.command :typhoon do |event|
       embed.title = "現在台風情報は発表されていません"
     end
   end
+end
+
+# gif
+bot.command :gif do |event, name|
+  event.message.delete
+  case name
+  when "gsbl" then #GET STICK BUGGED LOL
+    event.respond "https://tenor.com/view/get-stick-bugged-lol-gif-18048663"
+  when "lulu" then #LULU SUZUHARA MITANA...
+    event.respond "https://tenor.com/view/suzuhara-suzuhara-lulu-vtuber-blush-cute-gif-17751938"
+  when "umaru" then #CRYING UMARU
+    event.respond "https://tenor.com/view/sad-worst-gif-18746964"
+  when "vignette" then #VIGNETTE SURPRISED
+    event.respond "https://tenor.com/view/gabriel-dropout-vignette-gif-18640619" 
+  end
+end
+
+# asbot
+bot.command :asbot do |event, text|
+  event.message.delete
+  event.respond text
+end
+
+# list
+bot.command :list do |event, text|
+  case text
+  when "markdown" then
+    event.respond "** → 太字\n_ → 斜体\n* → 斜体\n__ → 下線\n~~ → 打ち消し線\n|| → ネタバレ\n\` → インラインコードブロック\n\`\`\` → コードブロック"
+  end
+end
+
+# calcblockexp
+bot.command :calcblockexp do |event, lvl|
+  event.respond "レベル#{lvl.to_i} までに #{25*(lvl.to_i)*(lvl.to_i-1)} 経験値が必要です！"
+end
+
+
+bot.command :test do |event, a|
+  puts a
 end
 
 # Botの実行

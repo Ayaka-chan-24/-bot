@@ -6,6 +6,7 @@ require 'uri'
 require 'timers'    #gem installする
 require 'open-uri'  #gem installする
 require 'nokogiri'  #gem installする
+require 'facter'    #gem installする
 
 ##### このbotのフォルダ構造 #####
 # 以下の通りである必要がある
@@ -27,6 +28,8 @@ require 'nokogiri'  #gem installする
 # - > タイマーの実行を止める
 # - heartbeatcount
 # - > Heartbeatの回数を返す
+# - botinfo
+# - > botの情報を返す
 
 # チャット系
 # - ping
@@ -133,7 +136,7 @@ $playing = [
   '実装してほしいもの募集中',
   'お友達がほしい',
   'お金ください',
-  ''
+  'Ruby言語お勉強中'
 ]
 
 $gaming_colors = ['FF0000', 'FF8000', 'FFFF00', '80FF00', '00FF00', '00FF80', '00FFFF',
@@ -849,7 +852,6 @@ bot.command :join do |event|
   $vc_join_channelname = channel.name
   bot.voice_connect(channel)
   event.respond "ボイスチャンネル(#{channel.name})に入りました！"
-
 end
 
 # leave
@@ -863,9 +865,25 @@ bot.command :leave do |event|
   bot.voice_destroy(event.server)
 end
 
-
-
-
+# botinfo
+bot.command :botinfo do |event|
+  bot_os = Facter.value(:'operatingsystem').to_s
+  bot_cpu = Facter.value(:'processors.models').to_s
+  bot_cpu = bot_cpu.slice(2..bot_cpu.length-3)
+  bot_mema = Facter.value(:'memory.system.used').to_s
+  bot_memt = Facter.value(:'memory.system.total').to_s
+  bot_ruby = Facter.value(:'ruby.version').to_s
+  event.respond "```DIFF
+[Bot Information]
+-> Ruby Version
+    #{bot_ruby}
+-> OS
+    #{bot_os}
+-> CPU
+    #{bot_cpu}
+-> Memory
+    #{bot_mema} / #{bot_memt}```"
+end
 
 bot.command :test do |event, a|
   puts a
